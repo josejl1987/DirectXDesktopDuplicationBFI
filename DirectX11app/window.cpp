@@ -46,8 +46,8 @@ int WinMainMessageLoop(HINSTANCE hInstance, int nCmdShow) {
 
 	// register the window class
 	RegisterClassEx(&wc);
-
-	// calculate the size of the client area
+	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);	// calculate the size of the client area
 	RECT wr = { 0, 0, 1920, 1080 };    // set the size, but not the position
 	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);    // adjust the size
 														  // create the window and use the result as the handle
@@ -72,7 +72,7 @@ int WinMainMessageLoop(HINSTANCE hInstance, int nCmdShow) {
 
 
 
-
+	
 	// enter the main loop:
 	// this struct holds Windows event messages
 	MSG msg;

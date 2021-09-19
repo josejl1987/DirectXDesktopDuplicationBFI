@@ -1,0 +1,16 @@
+[submodule "reshade"]
+	path = reshade
+	url = https://github.com/crosire/reshade
+	branch = main
+[submodule "deps/bx"]
+	path = deps/bx
+	url = https://github.com/bkaradzic/bx
+	branch = master
+[submodule "deps/bimg"]
+	path = deps/bimg
+	url = https://github.com/bkaradzic/bimg
+	branch = master
+[submodule "deps/bgfx"]
+	path = deps/bgfx
+	url = https://github.com/bkaradzic/bgfx
+	branch = master

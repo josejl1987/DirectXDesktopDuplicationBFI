@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include <DXGI.h>
+#include <dxgi.h>
 
 struct OutputInfo
 {
