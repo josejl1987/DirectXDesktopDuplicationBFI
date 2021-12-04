@@ -22,6 +22,9 @@
     <Filter Include="Source Files\imgui">
       <UniqueIdentifier>{c9ef83bb-ab0e-435d-8a2f-5acc125b620b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\imgui">
+      <UniqueIdentifier>{efce828b-f376-4d05-9ef1-dfb4df0ed6d3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="window.h">
@@ -101,6 +104,9 @@
     </ClInclude>
     <ClInclude Include="glob.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\misc\imguifilebrowser.h">
+      <Filter>Header Files\imgui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

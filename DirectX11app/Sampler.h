@@ -7,7 +7,8 @@ struct Sampler {
 	std::string Name;
 	D3D11_SAMPLER_DESC sampDesc;
 	Sampler();
-private:
+	ID3D11SamplerState* GetSamplerState();
+
 	ID3D11SamplerState* sampState = nullptr;
 
 

@@ -6,11 +6,12 @@
 #include "imgui/backends/imgui_impl_dx11.h"
 #include "imgui/imgui.h"
 #include <dxgi1_2.h>
+#include "Preset.h"
 
 bool D3D11RenderManager::CreateSamplerState(const D3D11_SAMPLER_DESC& desc, Sampler* samp) const {
 	memcpy(&samp->sampDesc, &desc, sizeof(D3D11_SAMPLER_DESC));
 	ID3D11SamplerState* state;
-	this->D3dDevice->CreateSamplerState(&samp->sampDesc, &state);
+	this->D3dDevice->CreateSamplerState(&samp->sampDesc, &samp->sampState);
 	return true;
 }
 
@@ -60,16 +61,19 @@ std::shared_ptr<D3D11RenderManager> D3D11RenderManager::Create(CGlobal& global) 
 	factory->Release();
 
 	auto pointSampler = Sampler();
-	pointSampler.sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	pointSampler.sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	pointSampler.sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	pointSampler.sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	newRendering->pointSampler.sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	newRendering->pointSampler.sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	newRendering->pointSampler.sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	newRendering->pointSampler.sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 	auto linearSampler = Sampler();
 
-	linearSampler.sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	linearSampler.sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	linearSampler.sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	linearSampler.sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	newRendering->linearSampler.sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	newRendering->linearSampler.sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	newRendering->linearSampler.sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	newRendering->linearSampler.sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+
+	newRendering->CreateSamplerState(newRendering->linearSampler.sampDesc, &newRendering->linearSampler);
+	newRendering->CreateSamplerState(newRendering->pointSampler.sampDesc, &newRendering->pointSampler);
 
 	newRendering->windowViewport.TopLeftX = 0;
 	newRendering->windowViewport.TopLeftY = 0;
@@ -83,14 +87,18 @@ std::shared_ptr<D3D11RenderManager> D3D11RenderManager::Create(CGlobal& global) 
 }
 
 void D3D11RenderManager::InitShaders() {
-	auto sl = std::make_unique<RetroSlang>(this->getSharedPtr());
-	auto vs = sl->CompileShader(std::filesystem::path("shaders/scanlines/shaders/res-independent-scanlines.slang"),
-	                            "vs_5_0", "main");
-	auto ps = sl->CompileShader(std::filesystem::path("shaders/scanlines/shaders/res-independent-scanlines.slang"),
-	                            "ps_5_0", "main");
-	s1 = new D3D11Shader(*vs->get(), *this);
-	s2 = new D3D11Shader(*ps->get(), *this);
+
+	this->retroSlang = std::make_shared<RetroSlang>(this->getSharedPtr());
+	this->Global.fileDialog = ImGui::FileBrowser(ImGuiFileBrowserFlags_NoModal);
+	this->Global.fileDialog.SetTitle("Shaders");
+	this->Global.fileDialog.SetTypeFilters({ ".slangp" });
 	return;
+}
+
+void D3D11RenderManager::LoadShader(std::string& shaderPath) {
+	auto preset = Preset::LoadPresetFromFile(*retroSlang, std::filesystem::path(shaderPath));
+	if (preset.has_value())
+		this->Global.currentPreset = std::make_shared<Preset>(preset.value());
 }
 
 void D3D11RenderManager::CleanupDeviceD3D() {
@@ -125,41 +133,31 @@ void D3D11RenderManager::CleanupRenderTarget() {
 HRESULT D3D11RenderManager::InitDesktopTexture(int width, int height) {
 	// Create render target texture
 
-	HRESULT hr;
-	D3D11_TEXTURE2D_DESC desktopTextureDesc;
-	ZeroMemory(&desktopTextureDesc, sizeof(D3D11_TEXTURE2D_DESC));
-	desktopTextureDesc.Width = width;
-	desktopTextureDesc.Height = height;
-	desktopTextureDesc.MipLevels = 1;
-	desktopTextureDesc.ArraySize = 1;
-	desktopTextureDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-	desktopTextureDesc.SampleDesc.Count = 1;
-	desktopTextureDesc.SampleDesc.Quality = 0;
-	desktopTextureDesc.Usage = D3D11_USAGE_DEFAULT;
-	desktopTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	desktopTextureDesc.CPUAccessFlags = 0;
-	desktopTextureDesc.MiscFlags = 0;
+	Global.desktopRT = new RenderTarget(this, width, height);
 
-	hr = D3dDevice->CreateTexture2D(&desktopTextureDesc, NULL, &desktopTexture);
-	if (FAILED(hr))
-		return hr;
-
-	// Create render target resource view
-	D3D11_SHADER_RESOURCE_VIEW_DESC desktopResourceViewDesc;
-	desktopResourceViewDesc.Format = desktopTextureDesc.Format;
-	desktopResourceViewDesc.Texture2D.MipLevels = desktopTextureDesc.MipLevels;
-	desktopResourceViewDesc.Texture2D.MostDetailedMip = desktopTextureDesc.MipLevels - 1;
-	desktopResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-
-	hr = D3dDevice->CreateShaderResourceView(desktopTexture, &desktopResourceViewDesc, &desktopResourceView);
-	if (FAILED(hr))
-		return hr;
+	tq = new TextureQuad();
 	return S_OK;
 }
 
 void D3D11RenderManager::RenderDesktopFrame() {
-	// this->tq->SetTechnique(s1, s2);
-	//	this->tq->Draw(desktopResourceView);
+	if (Global.desktopRT == nullptr)
+		return;
+
+	ID3D11ShaderResourceView* texture = nullptr;
+	if (this->Global.currentPreset != nullptr && this->Global.currentPreset->Passes.size() > 0) {
+		this->Global.currentPreset->Process(Global.desktopRT);
+
+		 texture = this->Global.currentPreset->GetOutput();
+	}
+	if (texture == nullptr)
+		texture = Global.desktopRT->texture.ShaderResourceView;
+	int col = ImGui::ColorConvertFloat4ToU32(ImVec4(0, 0, 0, 1.0f));
+
+	if (Global.frameCount++ % (Global.intervalBFI + 1) == 0)
+		col = -1;
+	ImGui::GetBackgroundDrawList()->AddImage(texture,
+	                                         ImVec2(0, 0),
+	             ImVec2(Global.desktopRT->size.width, Global.desktopRT->size.height),ImVec2(0,0),ImVec2(1,1),col);
 }
 
 void D3D11RenderManager::RenderFrame() {
@@ -199,14 +197,14 @@ void D3D11RenderManager::AcquireFrame() {
 	D3D11_TEXTURE2D_DESC acquiredTextureDescription;
 	acquiredDesktopImage->GetDesc(&acquiredTextureDescription);
 
-	if (desktopTexture == nullptr) {
+	if (Global.desktopRT == nullptr) {
 		hr = InitDesktopTexture(acquiredTextureDescription.Width, acquiredTextureDescription.Height);
 		if (hr)
 			return;
 	}
 
 	if (frameInfo.LastPresentTime.QuadPart > 0) {
-		D3dDeviceContext->CopyResource(desktopTexture, acquiredDesktopImage);
+		D3dDeviceContext->CopyResource(Global.desktopRT->texture.tex, acquiredDesktopImage);
 	}
 	outputDuplication->ReleaseFrame();
 }

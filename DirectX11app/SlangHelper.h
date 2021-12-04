@@ -29,7 +29,7 @@ class RetroSlang
 {
 public:
 	RetroSlang(std::shared_ptr<D3D11RenderManager> render);
-	Result<std::shared_ptr<Shader>> CompileShader(const std::filesystem::path& path, const std::string& profileName,
+	Result<Shader> CompileShader(const std::filesystem::path& path, const std::string& profileName,
 	                                              const std::string& entryPointName);
 
 
@@ -38,7 +38,7 @@ private:
 
 	std::shared_ptr<D3D11RenderManager> render = nullptr;	
 	Result<std::string> ParseRetroSlangShader(const std::filesystem::path& path, char* error, ShaderParsingInfo& info) const;
-	Result<std::shared_ptr<Shader>> CompileHlsl(const std::string& source, const std::filesystem::path& path, const std::string& entryPointName, const std::string&
+	Result<Shader> CompileHlsl(const std::string& source, const std::filesystem::path& path, const std::string& entryPointName, const std::string&
 	                                    profileName) const;
 	std::string SpirvToHlsl(std::vector<uint32_t> spirvBinary);
 };

@@ -9,17 +9,7 @@ int factorial(int number) { return number <= 1 ? number : factorial(number - 1) 
 
 TEST_CASE("Testing shader") {
 
-	PassFileLoader p;
 
-	for (auto& p : glob::rglob({ "/shaders/**/*.slangp", })) {
-		std::cout << p.string() << "\n";// e.g., foo.png, bar.jpg
-		auto d = Preset::LoadPresetFile(p.string());
-		if (!d) {
-			ErrorInfo & v = d.error();
-		
-			std::cout << v.ErrorMessage << "\n";
-		}
-	}
 
 
 

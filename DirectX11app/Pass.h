@@ -1,8 +1,8 @@
 #pragma once
-#include <vector>
-#include <d3d11.h>
 #include "D3D11RenderManager.h"
 #include "SlangHelper.h"
+#include <d3d11.h>
+#include <vector>
 class Shader;
 
 struct PixelSize {
@@ -10,16 +10,17 @@ struct PixelSize {
 	int height;
 };
 
-class RenderTarget {
-	PixelSize size;
-	ID3D11Texture2D* Texture;
-	ID3D11RenderTargetView* RenderTargetView;
+class Texture {
+public:
+	ID3D11Texture2D* tex;
 	ID3D11ShaderResourceView* ShaderResourceView;
-private:
-	D3D11RenderManager* render;
-	RenderTarget(D3D11RenderManager* render, int width, int height) {
-		this->render = render;
-		HRESULT hr;
+
+	PixelSize size;
+	Texture() {
+		tex = nullptr;
+		ShaderResourceView = nullptr;
+	}
+	Texture(D3D11RenderManager* renderManager, int width, int height) {
 		D3D11_TEXTURE2D_DESC desktopTextureDesc;
 		ZeroMemory(&desktopTextureDesc, sizeof(D3D11_TEXTURE2D_DESC));
 		desktopTextureDesc.Width = width;
@@ -33,43 +34,52 @@ private:
 		desktopTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
 		desktopTextureDesc.CPUAccessFlags = 0;
 		desktopTextureDesc.MiscFlags = 0;
-
-		hr = render->D3dDevice->CreateTexture2D(&desktopTextureDesc, NULL, &Texture);
-		if (FAILED(hr))
-			return;
-
-
-
 		// Create render target resource view
 		D3D11_SHADER_RESOURCE_VIEW_DESC desktopResourceViewDesc;
 		desktopResourceViewDesc.Format = desktopTextureDesc.Format;
 		desktopResourceViewDesc.Texture2D.MipLevels = desktopTextureDesc.MipLevels;
 		desktopResourceViewDesc.Texture2D.MostDetailedMip = desktopTextureDesc.MipLevels - 1;
 		desktopResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		HRESULT hr = renderManager->D3dDevice->CreateTexture2D(&desktopTextureDesc, NULL, &tex);
 
+		hr = renderManager->D3dDevice->CreateShaderResourceView(this->tex, &desktopResourceViewDesc,
+		                                                       &this->ShaderResourceView);
 
+		this->size.height = height;
+		this->size.width = width;
+		if (FAILED(hr))
+			return;
+	}
+};
+
+class RenderTarget {
+public:
+	PixelSize size;
+	ID3D11RenderTargetView* RenderTargetView;
+	Texture texture;
+	RenderTarget(D3D11RenderManager* render, int width, int height) {
+		this->render = render;
+		this->texture = Texture(render, width, height);
+		HRESULT hr;
 
 		// Create render target resource view
 		D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc;
 		ZeroMemory(&renderTargetViewDesc, sizeof(D3D11_RENDER_TARGET_VIEW_DESC));
+		renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		renderTargetViewDesc.Texture2D.MipSlice = 0;
 		renderTargetViewDesc.Format = renderTargetViewDesc.Format;
-
-
-		hr = render->D3dDevice->CreateShaderResourceView(Texture, &desktopResourceViewDesc, &this->ShaderResourceView);
-		hr = render->D3dDevice->CreateRenderTargetView(Texture, &renderTargetViewDesc, &this->RenderTargetView);
+		this->size.height = height;
+		this->size.width = width;
+		hr =
+		    render->D3dDevice->CreateRenderTargetView(this->texture.tex, &renderTargetViewDesc, &this->RenderTargetView);
 
 		if (FAILED(hr))
 			return;
 	}
 
+public:
+	D3D11RenderManager* render;
 };
-
-
-
-class Texture {
-	PixelSize size;
-};
-
 
 struct PassInfo {
 	bool FilterLinear;
@@ -79,38 +89,31 @@ struct PassInfo {
 	std::string ScaleTypeX;
 	std::string ScaleTypeY;
 
-	float ScaleX;
-	float ScaleY;
-	float Scale;
+	float ScaleX = 1;
+	float ScaleY = 1;
+	float Scale = 1;
 	std::string WrapMode;
 	std::string Alias;
-	std::string ShaderPath;
+	std::string ShaderPathStr;
+	std::filesystem::path ShaderPath;
+
 	std::vector<std::string> Textures;
 };
 
-class Pass
-{
+class Pass {
 public:
-
-
-	std::vector<Texture> Input;
+	PassInfo* info = nullptr;
+	std::vector<RenderTarget> Input;
 	PixelSize FinalViewportSize;
-	Shader& VertexShader;
-	Shader& PixelShader;
-	RenderTarget* Output;
-	Pass(Shader& vertexShader, Shader& pixelShader);
+	Shader* VertexShader = nullptr;
+	Shader* PixelShader = nullptr;
+	RenderTarget* Output = nullptr;
+	Pass();
+	Pass(Shader* vertexShader, Shader* pixelShader, PassInfo* passInfo);
 	void RenderParams() const;
-
 };
-
-
-
 
 class PassFileLoader {
-
-	static Pass LoadPass(const std::filesystem::path& path) {
-		
-	}
+public:
+	static Pass* LoadPass(RetroSlang& sl, PassInfo* passInfo);
 };
-
-

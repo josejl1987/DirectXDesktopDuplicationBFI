@@ -3,9 +3,10 @@
 #include "Sampler.h"
 #include <d3d11_2.h>
 #include <memory>
+struct RetroSlang;
 struct D3D11Shader;
 struct TextureQuad;
-
+struct  Preset;
 struct D3D11RenderManager : std::enable_shared_from_this<D3D11RenderManager> {
 	ID3D11Device* D3dDevice = nullptr;
 	ID3D11DeviceContext* D3dDeviceContext = nullptr;
@@ -29,8 +30,7 @@ struct D3D11RenderManager : std::enable_shared_from_this<D3D11RenderManager> {
 
 	Sampler pointSampler;
 	Sampler linearSampler;
-	D3D11Shader* s1;
-	D3D11Shader* s2;
+
 	TextureQuad* tq;
 
 	std::shared_ptr<D3D11RenderManager> getSharedPtr() { return shared_from_this(); }
@@ -38,8 +38,7 @@ struct D3D11RenderManager : std::enable_shared_from_this<D3D11RenderManager> {
 	bool CreateSamplerState(const D3D11_SAMPLER_DESC& desc, Sampler* samp) const;
 	D3D11RenderManager(CGlobal& global)
 		: renderTargetViewport(), pBackBuffer(nullptr), backbuffer(nullptr), windowViewport(), Global(global),
-		  intervalBFI(0), s1(nullptr),
-		  s2(nullptr), tq(nullptr) {
+		  intervalBFI(0), tq(nullptr) {
 	};
 
 	void Present() const;
@@ -47,6 +46,9 @@ struct D3D11RenderManager : std::enable_shared_from_this<D3D11RenderManager> {
 	static std::shared_ptr<D3D11RenderManager> Create(CGlobal& global);
 
 	void InitShaders();
+
+	void LoadShader(std::string& shaderPath);
+
 	void CleanupDeviceD3D();
 	void CreateRenderTarget();
 	void CleanupRenderTarget();
@@ -55,6 +57,5 @@ struct D3D11RenderManager : std::enable_shared_from_this<D3D11RenderManager> {
 	void RenderFrame();
 	void AcquireFrame();
 	bool CreateDuplication(int output_num);
-
-private:
+	std::shared_ptr<RetroSlang> retroSlang;
 };

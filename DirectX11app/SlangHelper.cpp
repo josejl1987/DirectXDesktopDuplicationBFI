@@ -100,7 +100,7 @@ RetroSlang::RetroSlang(std::shared_ptr<D3D11RenderManager> render) {
 	this->render = render;
 }
 
-Result<std::shared_ptr<Shader>> RetroSlang::CompileShader(const std::filesystem::path& path,
+Result<Shader> RetroSlang::CompileShader(const std::filesystem::path& path,
                                                                              const std::string& profileName,
                                                                              const std::string& entryPointName) {
 	shaderc_shader_kind kind;
@@ -138,7 +138,7 @@ Result<std::shared_ptr<Shader>> RetroSlang::CompileShader(const std::filesystem:
 	if (!hlsl) {
 		return tl::make_unexpected(hlsl.error());
 	}
-	hlsl->get()->Parameters = std::move(info.parameters);
+	hlsl->Parameters = std::move(info.parameters);
 	return hlsl;
 }
 
@@ -168,7 +168,7 @@ Result<std::string> RetroSlang::ParseRetroSlangShader(const std::filesystem::pat
 	return shaderPragma.str();
 }
 
-Result<std::shared_ptr<Shader>> RetroSlang::CompileHlsl(const std::string& source, const std::filesystem::path& path,
+Result<Shader> RetroSlang::CompileHlsl(const std::string& source, const std::filesystem::path& path,
                                                         const std::string& entryPointName,
                                                         const std::string& profileName) const {
 	ID3DBlob* blob;
@@ -177,7 +177,7 @@ Result<std::shared_ptr<Shader>> RetroSlang::CompileHlsl(const std::string& sourc
 	           entryPointName.c_str(), profileName.c_str(), 0, 0, &blob, &errorBlob);
 	if (errorBlob != nullptr) {
 		char* errorStr = (char*) errorBlob->GetBufferPointer();
-		return nullptr;
+		return tl::make_unexpected(std::string(errorStr));
 	}
 
 	std::shared_ptr<Shader> output = std::make_shared<Shader>();
@@ -186,7 +186,7 @@ Result<std::shared_ptr<Shader>> RetroSlang::CompileHlsl(const std::string& sourc
 	output->EntryPoint = std::string(entryPointName);
 	output->Name = path.filename().string();
 	output->Profile = std::string(profileName);
-	return output;
+	return *output;
 }
 
 std::string RetroSlang::SpirvToHlsl(std::vector<uint32_t> spirvBinary) {
