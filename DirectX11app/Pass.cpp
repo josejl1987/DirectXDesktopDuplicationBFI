@@ -29,3 +29,32 @@ Pass* PassFileLoader::LoadPass( RetroSlang& sl,  PassInfo * passInfo) {
 
 	return d;
 }
+
+ RenderTarget::RenderTarget(D3D11RenderManager* render, int width, int height) {
+	this->render = render;
+	this->RenderTargetView = nullptr;
+	this->texture = new Texture(render, width, height);
+
+	// Create render target resource view
+	D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc;
+	ZeroMemory(&renderTargetViewDesc, sizeof(D3D11_RENDER_TARGET_VIEW_DESC));
+	renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	renderTargetViewDesc.Texture2D.MipSlice = 0;
+	renderTargetViewDesc.Format = renderTargetViewDesc.Format;
+	this->size.height = height;
+	this->size.width = width;
+	HRESULT hr;
+	hr = render->D3dDevice->CreateRenderTargetView(this->texture->tex, &renderTargetViewDesc, &this->RenderTargetView);
+
+	if (FAILED(hr))
+		return;
+}
+
+RenderTarget::~RenderTarget() {
+	if (this->RenderTargetView)
+		this->RenderTargetView->Release();
+	this->RenderTargetView = nullptr;
+	delete texture;
+
+	
+}

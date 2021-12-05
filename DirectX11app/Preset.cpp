@@ -300,6 +300,6 @@ ID3D11ShaderResourceView* Preset::GetOutput() {
 
 	if (this->Passes.size() == 0)
 		return nullptr;
-	return this->Passes[this->Passes.size()-1].Output->texture.ShaderResourceView;
+	return this->Passes[this->Passes.size()-1].Output->texture->ShaderResourceView;
 
 }

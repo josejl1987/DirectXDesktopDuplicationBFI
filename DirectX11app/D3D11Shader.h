@@ -17,7 +17,7 @@ public:
 	std::shared_ptr<ID3D11PixelShader> PixelShader;
 
 	D3D11Shader(Shader* shader, D3D11RenderManager* render);
-
+	~D3D11Shader();
 };
 
 

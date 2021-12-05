@@ -138,6 +138,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	ImGui_ImplDX11_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
+	settings.render->CleanupRenderTarget();
+	settings.render->CleanupDeviceD3D();
+	settings.render.reset();
+	settings.render = nullptr;
 
 	::DestroyWindow(hwnd);
 	::UnregisterClass(wc.lpszClassName, wc.hInstance);

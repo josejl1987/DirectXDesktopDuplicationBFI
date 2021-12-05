@@ -2,12 +2,11 @@
 #include <d3dcompiler.h>
 
 /**
- * \brief 
- * \param shader 
- * \param render 
+ * \brief
+ * \param shader
+ * \param render
  */
-D3D11Shader::D3D11Shader(Shader* shader, D3D11RenderManager* render)
- {
+D3D11Shader::D3D11Shader(Shader* shader, D3D11RenderManager* render) {
 	ID3D11VertexShader* vertexShaderPtr;
 	ID3D11PixelShader* pixelShaderPtr;
 	this->ShaderData = shader;
@@ -31,7 +30,7 @@ D3D11Shader::D3D11Shader(Shader* shader, D3D11RenderManager* render)
 		D3D11_SHADER_BUFFER_DESC desc;
 		params->GetDesc(&desc);
 		ShaderConstantBuffer cb;
-				;
+		;
 		cb.Name = desc.Name;
 		D3D11_SHADER_VARIABLE_DESC variableDesc;
 		for (int j = 0; j < desc.Variables; j++) {
@@ -47,13 +46,16 @@ D3D11Shader::D3D11Shader(Shader* shader, D3D11RenderManager* render)
 				               variableDesc.StartSampler,
 				               variableDesc.SamplerSize };
 
-
 			cb.ConstantBufferVariables.try_emplace(v.Name, v);
 		}
 		this->ShaderData->ConstantBuffers.try_emplace(cb.Name, cb);
-
 	}
 
 	return;
 }
 
+D3D11Shader::~D3D11Shader() {
+	this->PixelShader->Release();
+	this->VertexShader->Release();
+	delete this->ShaderData;
+}

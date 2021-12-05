@@ -10,6 +10,10 @@ void TextureQuad::SetTechnique(D3D11RenderManager* render, Pass* pass) {
 	this->pass = pass;
 	this->render = render;
 
+	ReleaseObjects();
+
+
+	
 	// Create vertex buffer
 	D3D11_BUFFER_DESC BufferDesc;
 	RtlZeroMemory(&BufferDesc, sizeof(BufferDesc));
@@ -23,12 +27,12 @@ void TextureQuad::SetTechnique(D3D11RenderManager* render, Pass* pass) {
 	InitData.pSysMem = this->Vertices.data();
 
 	HRESULT hr = this->render->D3dDevice->CreateBuffer(&BufferDesc, &InitData, &VertexBuffer);
-	this->pixelBuffer.InputSize.x = pass->Input[0].texture.size.width;
-	this->pixelBuffer.InputSize.y = pass->Input[0].texture.size.height;
-	this->pixelBuffer.OutputSize.x = pass->Output->texture.size.width;
-	this->pixelBuffer.OutputSize.y = pass->Output->texture.size.height;
-	this->pixelBuffer.SourceSize.x = pass->Input[0].texture.size.width;
-	this->pixelBuffer.SourceSize.y = pass->Input[0].texture.size.height;
+	this->pixelBuffer.InputSize.x = pass->Input[0].texture->size.width;
+	this->pixelBuffer.InputSize.y = pass->Input[0].texture->size.height;
+	this->pixelBuffer.OutputSize.x = pass->Output->texture->size.width;
+	this->pixelBuffer.OutputSize.y = pass->Output->texture->size.height;
+	this->pixelBuffer.SourceSize.x = pass->Input[0].texture->size.width;
+	this->pixelBuffer.SourceSize.y = pass->Input[0].texture->size.height;
 
 		// Create vertex buffer
 	RtlZeroMemory(&BufferDesc, sizeof(BufferDesc));
@@ -59,10 +63,6 @@ void TextureQuad::SetTechnique(D3D11RenderManager* render, Pass* pass) {
 		{ "TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
 
-	if (InputLayout != nullptr) {
-		InputLayout->Release();
-		InputLayout = nullptr;
-	}
 
 	uint32_t NumElements = ARRAYSIZE(Layout);
 	 hr = render->D3dDevice->CreateInputLayout(Layout, NumElements, this->VertexShader->ShaderData->BinaryData,
@@ -84,15 +84,41 @@ void TextureQuad::SetTechnique(D3D11RenderManager* render, Pass* pass) {
 	this->render = render;
 }
 
-void TextureQuad::Draw() {
+void TextureQuad::ReleaseObjects() {
+	if (this->ConstantBuffer) {
+		this->ConstantBuffer->Release();
+		this->ConstantBuffer = nullptr;
+	}
+	if (this->ConstantPSBuffer) {
+		this->ConstantPSBuffer->Release();
+		this->ConstantPSBuffer = nullptr;
+	}
+	if (this->VertexShader) {
+		delete VertexShader;
+		VertexShader = nullptr;
+	}
+	if (this->PixelShader) {
+		delete PixelShader;
+		PixelShader = nullptr;
+	}
+
+	if (InputLayout != nullptr) {
+		InputLayout->Release();
+		InputLayout = nullptr;
+	}
+}
+ TextureQuad::~TextureQuad() {
+	this->ReleaseObjects();
+}
+	void TextureQuad::Draw() {
 	this->render->D3dDeviceContext->IASetInputLayout(InputLayout);
 
 
 	this->render->D3dDeviceContext->VSSetShader(this->VertexShader->VertexShader.get(), nullptr, 0);
 	this->render->D3dDeviceContext->PSSetShader(this->PixelShader->PixelShader.get(), nullptr, 0);
 	this->render->D3dDeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
-	this->render->D3dDeviceContext->PSSetShaderResources(0, 1, &pass->Input[0].texture.ShaderResourceView);
-	this->render->D3dDeviceContext->PSSetShaderResources(2, 1, &pass->Input[0].texture.ShaderResourceView);
+	this->render->D3dDeviceContext->PSSetShaderResources(0, 1, &pass->Input[0].texture->ShaderResourceView);
+	this->render->D3dDeviceContext->PSSetShaderResources(2, 1, &pass->Input[0].texture->ShaderResourceView);
 	this->render->D3dDeviceContext->OMSetRenderTargets(1, &pass->Output->RenderTargetView, nullptr);
 
 	D3D11_VIEWPORT vp;

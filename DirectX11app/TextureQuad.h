@@ -46,6 +46,9 @@ public:
 	Pass* pass;
 	TextureQuadPixelConstantBuffer pixelBuffer;
 	void SetTechnique(D3D11RenderManager* render, Pass* pass);
+	~TextureQuad();
+	void ReleaseObjects();
+
 	void Draw();
 	D3D11Shader* VertexShader;
 	D3D11Shader* PixelShader;

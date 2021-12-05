@@ -16,6 +16,14 @@ public:
 	ID3D11ShaderResourceView* ShaderResourceView;
 
 	PixelSize size;
+	~Texture() {
+		if (tex)
+			tex->Release();
+		tex = nullptr;
+		if (ShaderResourceView)
+			ShaderResourceView->Release();
+		ShaderResourceView = nullptr;
+	}
 	Texture() {
 		tex = nullptr;
 		ShaderResourceView = nullptr;
@@ -41,7 +49,8 @@ public:
 		desktopResourceViewDesc.Texture2D.MostDetailedMip = desktopTextureDesc.MipLevels - 1;
 		desktopResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 		HRESULT hr = renderManager->D3dDevice->CreateTexture2D(&desktopTextureDesc, NULL, &tex);
-
+		if (FAILED(hr))
+			return;
 		hr = renderManager->D3dDevice->CreateShaderResourceView(this->tex, &desktopResourceViewDesc,
 		                                                       &this->ShaderResourceView);
 
@@ -55,27 +64,10 @@ public:
 class RenderTarget {
 public:
 	PixelSize size;
-	ID3D11RenderTargetView* RenderTargetView;
-	Texture texture;
-	RenderTarget(D3D11RenderManager* render, int width, int height) {
-		this->render = render;
-		this->texture = Texture(render, width, height);
-		HRESULT hr;
-
-		// Create render target resource view
-		D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc;
-		ZeroMemory(&renderTargetViewDesc, sizeof(D3D11_RENDER_TARGET_VIEW_DESC));
-		renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-		renderTargetViewDesc.Texture2D.MipSlice = 0;
-		renderTargetViewDesc.Format = renderTargetViewDesc.Format;
-		this->size.height = height;
-		this->size.width = width;
-		hr =
-		    render->D3dDevice->CreateRenderTargetView(this->texture.tex, &renderTargetViewDesc, &this->RenderTargetView);
-
-		if (FAILED(hr))
-			return;
-	}
+	ID3D11RenderTargetView* RenderTargetView = nullptr;
+	Texture* texture;
+	RenderTarget(D3D11RenderManager* render, int width, int height);
+	~RenderTarget();
 
 public:
 	D3D11RenderManager* render;

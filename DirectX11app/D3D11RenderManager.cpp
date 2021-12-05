@@ -6,6 +6,7 @@
 #include "imgui/backends/imgui_impl_dx11.h"
 #include "imgui/imgui.h"
 #include <dxgi1_2.h>
+#include <d3d11sdklayers.h>
 #include "Preset.h"
 
 bool D3D11RenderManager::CreateSamplerState(const D3D11_SAMPLER_DESC& desc, Sampler* samp) const {
@@ -102,7 +103,15 @@ void D3D11RenderManager::LoadShader(std::string& shaderPath) {
 }
 
 void D3D11RenderManager::CleanupDeviceD3D() {
-	CleanupRenderTarget();
+	ID3D11Debug* m_d3dDebug;
+	D3dDevice->QueryInterface(__uuidof(ID3D11Debug), reinterpret_cast<void**>(&m_d3dDebug));
+
+	if (linearSampler.sampState) {
+		linearSampler.sampState->Release();
+	}
+	if (pointSampler.sampState) {
+		pointSampler.sampState->Release();
+	}
 	if (g_pSwapChain) {
 		g_pSwapChain->Release();
 		g_pSwapChain = NULL;
@@ -111,10 +120,13 @@ void D3D11RenderManager::CleanupDeviceD3D() {
 		D3dDeviceContext->Release();
 		D3dDeviceContext = NULL;
 	}
+	m_d3dDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+
 	if (D3dDevice) {
 		D3dDevice->Release();
 		D3dDevice = NULL;
 	}
+	m_d3dDebug->Release();
 }
 
 void D3D11RenderManager::CreateRenderTarget() {
@@ -128,6 +140,10 @@ void D3D11RenderManager::CleanupRenderTarget() {
 		g_mainRenderTargetView->Release();
 		g_mainRenderTargetView = nullptr;
 	}
+	if (Global.desktopRT)
+		delete Global.desktopRT;
+	if (tq)
+		delete tq;
 }
 
 HRESULT D3D11RenderManager::InitDesktopTexture(int width, int height) {
@@ -150,7 +166,7 @@ void D3D11RenderManager::RenderDesktopFrame() {
 		 texture = this->Global.currentPreset->GetOutput();
 	}
 	if (texture == nullptr)
-		texture = Global.desktopRT->texture.ShaderResourceView;
+		texture = Global.desktopRT->texture->ShaderResourceView;
 	int col = ImGui::ColorConvertFloat4ToU32(ImVec4(0, 0, 0, 1.0f));
 
 	if (Global.frameCount++ % (Global.intervalBFI + 1) == 0)
@@ -204,7 +220,7 @@ void D3D11RenderManager::AcquireFrame() {
 	}
 
 	if (frameInfo.LastPresentTime.QuadPart > 0) {
-		D3dDeviceContext->CopyResource(Global.desktopRT->texture.tex, acquiredDesktopImage);
+		D3dDeviceContext->CopyResource(Global.desktopRT->texture->tex, acquiredDesktopImage);
 	}
 	outputDuplication->ReleaseFrame();
 }
